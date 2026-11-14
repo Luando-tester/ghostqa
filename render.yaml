@@ -1,0 +1,11 @@
+# Render Blueprint — creates the free GhostQA web service from this repo.
+# In Render: New → Blueprint → connect this repo → Apply.
+# (Or manual path: New → Web Service → pick this repo → Runtime: Docker →
+#  Plan: Free → Create. The app reads the PORT env var Render injects.)
+services:
+  - type: web
+    name: ghostqa
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /
