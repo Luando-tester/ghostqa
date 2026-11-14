@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GhostQA Fixture Site</title>
+  <!--
+    Planted ghosts — exactly four check types (findings may be more than 4
+    because Chrome auto-logs a second console error for the fetch 404):
+      1. console-errors  : the inline script calls console.error() AND Chrome
+                           auto-logs "Failed to load resource" for the fetch 404
+      2. failed-requests : fetch() hits /ghost-404-asset that the server returns 404 for
+      3. a11y-alt        : <img> below has no alt attribute (pixel.png exists, so no 404 noise)
+      4. dead-links      : <a href="#"> below
+  -->
+  <script>
+    console.error("👻 Ghost in the machine");
+    // Trigger a 404 via fetch. Chrome automatically logs a "Failed to load
+    // resource" console error for the HTTP 404 response, so this produces TWO
+    // console-error findings (the explicit console.error above AND the browser's
+    // own "Failed to load resource" message). The fixture test therefore asserts
+    // by check *type* (console-errors, failed-requests, a11y-alt, dead-links)
+    // rather than by exact finding count.
+    fetch("/ghost-404-asset").catch(function(){});
+  </script>
+</head>
+<body>
+  <h1>Haunted Fixture Page</h1>
+
+  <!-- Ghost 3: image without alt (pixel.png exists so no 404 noise) -->
+  <img src="pixel.png" />
+
+  <!-- Ghost 4: placeholder link -->
+  <a href="#">Click if you dare</a>
+</body>
+</html>

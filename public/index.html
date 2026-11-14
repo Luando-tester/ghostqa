@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GhostQA — hunt the ghosts in your web app</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header>
+  <h1>👻 GhostQA</h1>
+  <p class="tagline">Your web app is haunted. Let's find the ghosts.</p>
+</header>
+<main>
+  <form id="haunt-form">
+    <input id="url-input" type="url" placeholder="https://your-site.com" required autocomplete="url" />
+    <button type="submit" id="submit-btn">Start the haunt</button>
+  </form>
+
+  <!-- Error state -->
+  <div id="error-box" hidden></div>
+
+  <!-- Loading state -->
+  <div id="status" hidden>
+    <div class="status-row">
+      <div class="spinner"></div>
+      <span class="status-text" id="status-text">Summoning the crawler…</span>
+    </div>
+    <div class="status-hint" id="status-hint">This can take a minute. The ghosts are hiding.</div>
+    <div class="progress-track"><div class="progress-fill"></div></div>
+  </div>
+
+  <!-- Results -->
+  <section id="results" hidden>
+    <section id="score">
+      <h2>Hauntedness: <span id="score-value">–</span>/100</h2>
+      <div class="score-bar-wrap">
+        <div class="score-bar-track">
+          <div class="score-bar-fill" id="score-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <p id="score-label"></p>
+    </section>
+    <div class="report-link-row" id="report-link-row"></div>
+    <ul id="findings"></ul>
+  </section>
+</main>
+<script>
+  const form       = document.getElementById("haunt-form");
+  const urlInput   = document.getElementById("url-input");
+  const submitBtn  = document.getElementById("submit-btn");
+  const errorBox   = document.getElementById("error-box");
+  const statusEl   = document.getElementById("status");
+  const statusText = document.getElementById("status-text");
+  const statusHint = document.getElementById("status-hint");
+  const resultsEl  = document.getElementById("results");
+  const scoreBar   = document.getElementById("score-bar");
+
+  const STATUS_MSGS = [
+    ["Summoning the crawler…",           "Opening the browser portal."],
+    ["Walking the pages…",               "BFS in progress — following every link."],
+    ["Running the checks…",              "Checking for console errors, broken links, mixed content…"],
+    ["Tallying the spirits…",            "Counting ghosts and computing hauntedness."],
+    ["Almost done…",                     "The report is nearly assembled."],
+  ];
+  let statusInterval;
+  let statusStep = 0;
+
+  function startLoadingUI(url) {
+    errorBox.hidden = true;
+    resultsEl.hidden = true;
+    submitBtn.disabled = true;
+    urlInput.disabled = true;
+    statusStep = 0;
+    statusText.textContent = STATUS_MSGS[0][0];
+    statusHint.textContent = STATUS_MSGS[0][1];
+    statusEl.hidden = false;
+
+    statusInterval = setInterval(() => {
+      statusStep = Math.min(statusStep + 1, STATUS_MSGS.length - 1);
+      statusText.textContent = STATUS_MSGS[statusStep][0];
+      statusHint.textContent = STATUS_MSGS[statusStep][1];
+    }, 7000);
+  }
+
+  function stopLoadingUI() {
+    clearInterval(statusInterval);
+    statusEl.hidden = true;
+    submitBtn.disabled = false;
+    urlInput.disabled = false;
+  }
+
+  function showError(msg) {
+    errorBox.textContent = "⚠️ " + msg;
+    errorBox.hidden = false;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const url = urlInput.value.trim();
+
+    if (!url) { showError("Please enter a URL."); return; }
+    if (!/^https?:\/\//i.test(url)) {
+      showError("URL must start with http:// or https://");
+      return;
+    }
+
+    startLoadingUI(url);
+
+    let res, report;
+    try {
+      res = await fetch("/api/haunt", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      report = await res.json();
+    } catch (err) {
+      stopLoadingUI();
+      showError("Could not reach the server. Is it running?");
+      return;
+    }
+
+    stopLoadingUI();
+
+    if (!res.ok) {
+      showError(report.error ?? "Server error — the haunt failed.");
+      return;
+    }
+
+    // Populate score
+    const score = report.hauntedness;
+    document.getElementById("score-value").textContent = score;
+    const color = score === 0 ? "var(--eerie)"
+                : score < 30  ? "var(--dim)"
+                : score < 60  ? "var(--warn)"
+                : "var(--danger)";
+    scoreBar.style.background = color;
+    // Trigger animation on next frame
+    requestAnimationFrame(() => { scoreBar.style.width = score + "%"; });
+
+    document.getElementById("score-label").textContent =
+      score === 0  ? "No ghosts found. Suspiciously clean…"
+      : score < 30 ? "A few restless spirits."
+      : score < 60 ? "Genuinely haunted."
+      : "FULL POLTERGEIST. Call an exorcist (or a QA).";
+
+    // Report page link
+    const linkRow = document.getElementById("report-link-row");
+    linkRow.innerHTML = `🔗 Shareable report: <a href="/report/${report.id}" target="_blank">/report/${report.id}</a>`;
+
+    // Findings
+    const list = document.getElementById("findings");
+    if (report.findings.length === 0) {
+      list.innerHTML = `<li class="empty-state">🕊️ Zero findings — this site is impressively clean.</li>`;
+    } else {
+      list.innerHTML = report.findings.map((f) => {
+        const severityIcon = { critical: "💀", major: "🔥", minor: "👻", poltergeist: "🌀" }[f.severity] ?? "";
+        const screenshotHtml = f.screenshot
+          ? `<details style="margin-top:0.5rem"><summary style="cursor:pointer;color:var(--glow);font-size:0.85rem">🖼️ Screenshot</summary><img src="${f.screenshot}" alt="Screenshot" loading="lazy" style="max-width:100%;border-radius:6px;margin-top:0.4rem;border:1px solid rgba(167,139,250,0.3)" /></details>`
+          : "";
+        return `<li class="sev-${f.severity}">
+          <strong>${severityIcon} [${f.severity}] ${escHtml(f.title)}</strong> — <span style="font-size:0.85rem;color:var(--dim)">${escHtml(f.page)}</span>
+          <br><span style="font-size:0.9rem">${escHtml(f.detail)}</span>
+          ${screenshotHtml}
+        </li>`;
+      }).join("");
+    }
+
+    resultsEl.hidden = false;
+  });
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+</script>
+</body>
+</html>

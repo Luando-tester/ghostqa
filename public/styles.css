@@ -1,0 +1,179 @@
+:root {
+  --bg: #0d0714;
+  --panel: #1a0f2e;
+  --ink: #e8dff5;
+  --dim: #9d8bbd;
+  --glow: #a78bfa;
+  --eerie: #34d399;
+  --danger: #f87171;
+  --warn: #fbbf24;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at top, #2a1650 0%, var(--bg) 60%);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+header { text-align: center; padding: 3rem 1rem 1rem; }
+h1 {
+  font-size: clamp(2.2rem, 8vw, 3.5rem);
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 24px var(--glow), 0 0 64px var(--glow);
+}
+.tagline { color: var(--dim); font-size: 1.15rem; margin: 0.5rem 0 0; }
+main { max-width: 760px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
+
+/* ── Form ── */
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+input[type="url"] {
+  flex: 1 1 240px;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--glow);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 1rem;
+  min-width: 0;
+}
+input[type="url"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--glow);
+}
+button {
+  padding: 0.8rem 1.4rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--glow);
+  color: #14092b;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover { filter: brightness(1.15); }
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* ── Status / loading ── */
+#status {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--panel);
+  border-radius: 10px;
+  border-left: 4px solid var(--glow);
+  color: var(--eerie);
+}
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(167,139,250,0.2);
+  border-top-color: var(--glow);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.status-text { font-size: 0.95rem; }
+.status-hint  { font-size: 0.8rem; color: var(--dim); margin-top: 0.4rem; }
+
+/* ── Progress bar ── */
+.progress-track {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  margin-top: 0.75rem;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--glow);
+  border-radius: 999px;
+  width: 15%;
+  animation: crawl 2.4s ease-in-out infinite;
+}
+@keyframes crawl {
+  0%   { width: 15%; }
+  60%  { width: 85%; }
+  100% { width: 15%; }
+}
+
+/* ── Error state ── */
+#error-box {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: rgba(248,113,113,0.1);
+  border-left: 4px solid var(--danger);
+  border-radius: 10px;
+  color: var(--danger);
+  font-size: 0.95rem;
+}
+
+/* ── Score ── */
+#score { margin-top: 2rem; }
+h2 { margin: 0 0 0.25rem; }
+.score-bar-wrap { margin: 0.5rem 0 0.75rem; }
+.score-bar-track {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+.score-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.7s ease;
+}
+#score-label { color: var(--dim); margin: 0 0 1.25rem; }
+
+/* ── Report link ── */
+.report-link-row {
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+.report-link-row a { color: var(--glow); }
+.report-link-row a:hover { text-decoration: underline; }
+
+/* ── Findings list ── */
+#findings { list-style: none; padding: 0; }
+#findings li {
+  background: var(--panel);
+  border-left: 4px solid var(--dim);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+}
+#findings li.sev-critical    { border-left-color: var(--danger); }
+#findings li.sev-major       { border-left-color: var(--warn); }
+#findings li.sev-minor       { border-left-color: var(--dim); }
+#findings li.sev-poltergeist { border-left-color: var(--eerie); }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--dim);
+  font-size: 1.1rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 540px) {
+  header { padding-top: 2rem; }
+  form { flex-direction: column; }
+  input[type="url"], button { width: 100%; }
+}

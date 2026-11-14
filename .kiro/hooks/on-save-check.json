@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "build-and-fixture-haunt-on-save",
+      "description": "On saving any TypeScript source file, rebuild the project and run the fixture haunt to catch regressions immediately.",
+      "trigger": "PostFileSave",
+      "matcher": "src/.*\\.ts$",
+      "action": {
+        "type": "command",
+        "command": "npm run build && npm run test:fixture"
+      }
+    }
+  ]
+}

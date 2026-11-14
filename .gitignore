@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+reports/
+.DS_Store
+
+# IMPORTANT (Kiroween rules): do NOT ignore .kiro — the repo must contain
+# the /.kiro directory at its root to prove Kiro usage.
+!.kiro/
