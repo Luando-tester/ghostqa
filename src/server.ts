@@ -37,10 +37,11 @@ async function fetchGeminiSummary(report: HauntReport): Promise<string | undefin
   });
 
   // Free-tier gemini-3.5-flash is slow: a trivial 2-token reply measured
-  // 27.8s on 14/11/2026, so a 10s timeout could never succeed. 45s gives
-  // a ~100-word summary room to finish; the haunt still completes.
+  // 27.8s on 14/11/2026, and a real ~100-word summary took >45s, so the
+  // 10s and 45s timeouts could never succeed. 120s gives it room; the
+  // haunt still completes, just slower. (Test 14/11 ~12:53 pending.)
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
+  const timer = setTimeout(() => controller.abort(), 120_000);
 
   try {
     const res = await fetch(endpoint, {
@@ -106,11 +107,16 @@ app.post("/api/haunt", async (req, res) => {
   const id = randomUUID();
   try {
     const report = await haunt(id, url, { maxPages, maxDepth });
-    // Optional AI summary — never blocks or breaks the haunt on failure.
-    const aiSummary = await fetchGeminiSummary(report);
-    if (aiSummary) report.aiSummary = aiSummary;
     reports.set(id, report);
+    // Reply immediately — the haunt itself is the deliverable.
     res.json(report);
+    // Optional AI summary in the background: free-tier Gemini is far too
+    // slow to block on (measured 27.8s for a trivial reply, >120s for a
+    // real one). It attaches to the stored report when it eventually
+    // arrives, and the report page shows it on refresh.
+    fetchGeminiSummary(report).then((aiSummary) => {
+      if (aiSummary) report.aiSummary = aiSummary;
+    });
   } catch (err) {
     console.error("Haunt failed:", err);
     res.status(500).json({ error: "haunt failed", detail: (err as Error).message });
@@ -175,13 +181,19 @@ function renderReportHtml(report: HauntReport): string {
   // breaking out of the script block.  \u003c is a safe JS unicode escape.
   const mdReport = JSON.stringify(report).replace(/</g, "\\u003c");
 
-  // AI summary section (shown only when present)
+  // AI summary section (shown only when present); when a key is configured
+  // but the slow background call has not returned yet, say so honestly.
   const aiSummaryHtml = report.aiSummary
     ? `<section id="ai-summary">
         <h3>👾 Spectral Analysis</h3>
         <p class="ai-summary-text">${escapeHtml(report.aiSummary)}</p>
       </section>`
-    : "";
+    : process.env.GEMINI_API_KEY
+      ? `<section id="ai-summary-pending">
+        <h3>👾 Spectral Analysis</h3>
+        <p class="ai-summary-text">Still brewing — the spirits are slow today. Refresh this page in a bit.</p>
+      </section>`
+      : "";
 
   return `<!doctype html>
 <html lang="en">
