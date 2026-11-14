@@ -36,8 +36,11 @@ async function fetchGeminiSummary(report: HauntReport): Promise<string | undefin
     contents: [{ parts: [{ text: prompt }] }],
   });
 
+  // Free-tier gemini-3.5-flash is slow: a trivial 2-token reply measured
+  // 27.8s on 14/11/2026, so a 10s timeout could never succeed. 45s gives
+  // a ~100-word summary room to finish; the haunt still completes.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10_000);
+  const timer = setTimeout(() => controller.abort(), 45_000);
 
   try {
     const res = await fetch(endpoint, {
