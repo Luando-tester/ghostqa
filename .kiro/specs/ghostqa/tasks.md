@@ -7,6 +7,7 @@
 - [x] 4. Implement reporter + hauntedness scoring — verified weights critical 40 / poltergeist 25 / major 15 / minor 5; score formula `min(100, round(total / pages))`; deterministic and monotonic.
 - [x] 5. Fixture site with planted ghosts; fixture haunt finds exactly them — created `test/fixture/` with one console error, one 404 fetch, one img without alt, one `href="#"`; `npm run test:fixture` asserts exactly the 4 check types, exits non-zero on mismatch.
 - [x] 6. `npm run build` green; `npm run dev` serves UI end-to-end — build clean; `GET /` → 200; bad-URL `POST /api/haunt` → 400.
+- [x] 6a. Fix crawler dedup bug — added `normalizeUrl` helper in `crawler.ts` (strips trailing slash from path, drops fragment, preserves query, lowercases host via URL parser); applied when seeding `seen`, when queueing discovered links, and when storing the URL in the queue. Prevents `http://localhost:4000` and `http://localhost:4000/` from being treated as distinct pages. `npm run build` ✅  `npm run test:fixture` ✅
 
 ## Phase 2 — Agent polish (days 7–13)
 - [x] 7. Per-finding screenshots (M1) — one `page-N.png` per page-with-findings saved to `reports/<id>/`, served via `GET /reports/:id/:file`, URL stored in `finding.screenshot`.

@@ -24,6 +24,29 @@ function sameOrigin(a: string, b: string): boolean {
 }
 
 /**
+ * Canonicalize a URL for deduplication:
+ *   - lowercases the host (the URL parser does this automatically)
+ *   - drops the fragment (never affects page content)
+ *   - strips a trailing slash from the path, unless the path is already "/"
+ *     (root path "/" becomes "" so the key is just the origin, e.g. http://localhost:4000)
+ *   - preserves the query string (distinct queries are distinct pages)
+ *
+ * Returns the original string if parsing fails.
+ */
+function normalizeUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    u.hash = "";
+    if (u.pathname.length > 1 && u.pathname.endsWith("/")) {
+      u.pathname = u.pathname.slice(0, -1);
+    }
+    return u.toString();
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * Haunt a site: crawl same-origin pages (BFS, bounded), run the checks on
  * every page, and build the report. One browser, pages visited one at a time.
  *
@@ -43,9 +66,10 @@ export async function haunt(
   const startedAt = new Date().toISOString();
   const browser = await chromium.launch();
   const pages: PageResult[] = [];
-  const seen = new Set<string>([target]);
+  const normalizedTarget = normalizeUrl(target);
+  const seen = new Set<string>([normalizedTarget]);
   const queue: Array<{ url: string; depth: number }> = [
-    { url: target, depth: 0 },
+    { url: normalizedTarget, depth: 0 },
   ];
 
   // Prepare per-report screenshots directory (created lazily on first need).
@@ -128,7 +152,7 @@ export async function haunt(
           els.map((el) => (el as HTMLAnchorElement).href).filter(Boolean),
         );
         for (const link of links) {
-          const clean = link.split("#")[0];
+          const clean = normalizeUrl(link.split("#")[0]);
           if (sameOrigin(clean, target) && !seen.has(clean)) {
             seen.add(clean);
             queue.push({ url: clean, depth: depth + 1 });
