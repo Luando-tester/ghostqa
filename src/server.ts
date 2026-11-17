@@ -169,12 +169,19 @@ function renderReportHtml(report: HauntReport): string {
         <strong>${escapeHtml(f.title)}</strong>
         <p class="finding-page">📄 ${escapeHtml(f.page)}</p>
         <p class="finding-detail">${escapeHtml(f.detail)}</p>
+        ${f.fix ? `<p class="finding-fix">🔧 <strong>Suggested fix:</strong> ${escapeHtml(f.fix)}</p>` : ""}
         ${f.evidence ? `<pre class="evidence">${escapeHtml(f.evidence)}</pre>` : ""}
         ${f.screenshot ? `<details class="screenshot-wrap">
           <summary>🖼️ Screenshot</summary>
           <img class="screenshot" src="${escapeHtml(f.screenshot)}" alt="Screenshot of ${escapeHtml(f.page)}" loading="lazy" />
         </details>` : ""}
+        <label class="fix-check"><input type="checkbox" class="finding-check" data-finding-id="${escapeHtml(f.id)}" /> ✅ Fixed</label>
       </li>`).join("\n");
+
+  // Fixed counter for the interactive checklist (only when findings exist).
+  const fixCounterHtml = report.findings.length > 0
+    ? `<div id="fix-counter" class="fix-counter">0/${report.findings.length} fixed</div>`
+    : "";
 
   // Build copy-as-markdown data embedded in the page as JSON.
   // Escape `<` to prevent a finding whose text contains `</script>` from
@@ -223,6 +230,11 @@ function renderReportHtml(report: HauntReport): string {
   .screenshot-wrap { margin-top: 0.75rem; }
   .screenshot-wrap summary { cursor: pointer; color: var(--glow); font-size: 0.9rem; }
   .screenshot { max-width: 100%; border-radius: 6px; margin-top: 0.5rem; border: 1px solid rgba(167,139,250,0.3); }
+  .finding-fix { margin: 0.5rem 0 0; font-size: 0.9rem; background: rgba(167,139,250,0.08); border-left: 3px solid var(--glow); border-radius: 4px; padding: 0.5rem 0.75rem; }
+  .fix-check { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.75rem; cursor: pointer; color: var(--dim); font-size: 0.9rem; }
+  .fix-check input { cursor: pointer; accent-color: var(--glow); }
+  .finding.is-fixed { opacity: 0.55; }
+  .fix-counter { position: sticky; top: 0; z-index: 10; background: var(--panel); border: 1px solid rgba(167,139,250,0.3); border-radius: 8px; padding: 0.6rem 1rem; font-weight: bold; margin-bottom: 1rem; }
   .empty-state { text-align: center; padding: 3rem 1rem; color: var(--dim); font-size: 1.1rem; }
   .copy-btn { margin-top: 1.5rem; }
   .ai-summary-text { font-style: italic; color: var(--eerie); background: rgba(167,139,250,0.08); border-left: 3px solid var(--eerie); border-radius: 4px; padding: 0.75rem 1rem; margin: 0.5rem 0 0; line-height: 1.6; }
@@ -274,6 +286,8 @@ function renderReportHtml(report: HauntReport): string {
     <button id="copy-md-btn">📋 Copy as Markdown</button>
     <span class="copy-feedback" id="copy-feedback">Copied!</span>
   </div>
+
+  ${fixCounterHtml}
 
   <ul id="findings-list">${findingsHtml}</ul>
 </main>
@@ -337,6 +351,32 @@ function renderReportHtml(report: HauntReport): string {
       setTimeout(() => fb.classList.remove("show"), 2000);
     });
   });
+
+  // Interactive fix checklist — checked state persists in localStorage per report id
+  (function () {
+    const STORAGE_KEY = "ghostqa-fixed-${report.id}";
+    const boxes = Array.prototype.slice.call(document.querySelectorAll(".finding-check"));
+    const counterEl = document.getElementById("fix-counter");
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) { saved = []; }
+    if (!Array.isArray(saved)) saved = [];
+    const savedSet = {};
+    saved.forEach((id) => { savedSet[id] = true; });
+    function refresh() {
+      const checked = boxes.filter((b) => b.checked);
+      if (counterEl) counterEl.textContent = checked.length + "/" + boxes.length + " fixed";
+      boxes.forEach((b) => {
+        const li = b.closest("li.finding");
+        if (li) li.classList.toggle("is-fixed", b.checked);
+      });
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(checked.map((b) => b.dataset.findingId))); } catch (e) {}
+    }
+    boxes.forEach((b) => {
+      if (savedSet[b.dataset.findingId]) b.checked = true;
+      b.addEventListener("change", refresh);
+    });
+    refresh();
+  })();
 </script>
 </body>
 </html>`;

@@ -9,6 +9,8 @@ export interface Finding {
   detail: string;
   evidence?: string;
   screenshot?: string;
+  /** Concrete, actionable suggestion for fixing this finding. */
+  fix?: string;
 }
 
 export interface PageResult {
