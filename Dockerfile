@@ -2,7 +2,7 @@
 # Playwright needs system browser deps; use the official Playwright image
 # (Node 22 + Chromium + all deps preinstalled). dist/ is gitignored, so the
 # host builds from src with `npm run build`.
-FROM mcr.microsoft.com/playwright:v1.49.0-jammy
+FROM mcr.microsoft.com/playwright:v1.65.1-jammy
 
 WORKDIR /app
 
